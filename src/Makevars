@@ -1,0 +1,7 @@
+# Turn on C++11 support to get access to long long (guaranteed 64-bit ints)
+CXX_STD = CXX11
+
+# OMP
+PKG_CXXFLAGS += -I"./include" $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS += $(SHLIB_OPENMP_CXXFLAGS)
+PKG_CPPFLAGS += -DARMA_64BIT_WORD=1
