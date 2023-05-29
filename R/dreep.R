@@ -49,9 +49,10 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
 #' @import snow
 #' @import fgsea
 #' @export
-runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC")) {
+runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c("CTRP2","GDSC")) {
   gpds.signatures <- toupper(gpds.signatures)
   gpds.signatures = base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE)
+  gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
 
   if (cores==0) {cores = ifelse(detectCores()>1,floor(detectCores()/2),1)}
 
