@@ -30,7 +30,7 @@ devtools::install_github("gambalab/gficf")
 
 ### 2. Installation of DREEP
 
-From the R terminal the following commands
+From the R terminal exec the following commands
 
 ``` r
 if(!require(devtools)){ install.packages("devtools")}
