@@ -10,7 +10,7 @@ DREEP require the installation of [gficf v2](https://github.com/gambalab/gficf) 
 
 ### 1. Installation of GFICF on Ubuntu/Debian
 
-You need gsl dev library to successfully install RcppGSL library. On Ubuntu/Debian systems this can be accomplished by running the following command from the Terminal `sudo apt-get install libgsl-dev libcurl4-openssl-dev libssl-dev libxml2-dev` from the terminal.
+You need gsl dev library to successfully install RcppGSL library. On Ubuntu/Debian systems this can be accomplished by running the following command `sudo apt-get install libgsl-dev libcurl4-openssl-dev libssl-dev libxml2-dev` from the terminal.
 
 Then exec in R terminal the following commands to install gficf
 
@@ -25,7 +25,7 @@ if("RcppML" %in% rownames(installed.packages())) {remove.packages("RcppML")}
 devtools::install_github("zdebruine/RcppML")
 
 if(!require(devtools)){ install.packages("devtools")}
-devtools::install_github("dibbelab/gficf")
+devtools::install_github("gambalab/gficf")
 ```
 
 ### 2. Installation of DREEP
