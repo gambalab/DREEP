@@ -66,7 +66,7 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
   pb$tick(0)
 
   for(i in gpds.signatures) {
-    M.drug.mkrs = cbind(M.drug.mkrs,readRDS(paste0("data/",i,".gpds.rds")))
+    M.drug.mkrs = cbind(M.drug.mkrs,readRDS(paste0(find.package("DREEP"),"/data/",i,".gpds.rds")))
     meta.drug = rbind(meta.drug,readRDS(paste0(find.package("DREEP", quiet = FALSE),"/data/",i,".drug.metadata.rds")))
     pb$tick()
   }
