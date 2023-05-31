@@ -139,7 +139,10 @@ runDiffDrugAnalisys = function(dreep.data,cell.set1,cell.set2,fdr.th=0.1,show.pl
   tmp$med2 <- apply(dreep.data$es.mtx[cell.set2,],2,median)
 
   tmp$specific <- sign(tmp$med1) != sign(tmp$med2)
+  oldw <- getOption("warn")
+  options(warn = -1)
   tmp$p.value = apply(dreep.data$es.mtx, 2, function(x,c1=cell.set1,c2=cell.set2) ks.test(x[c1],x[c2])$p.value)
+  options(warn = oldw)
   tmp$fdr <- p.adjust(tmp$p.value,method = "fdr")
   tmp$significant <- factor(as.character(tmp$fdr<fdr.th & tmp$specific),levels = c("TRUE","FALSE"))
 
@@ -171,7 +174,7 @@ runDiffDrugAnalisys = function(dreep.data,cell.set1,cell.set2,fdr.th=0.1,show.pl
 #' @importFrom uwot umap tumap
 #' @import Rtsne
 #' @export
-runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=F, ...) {
+runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T, ...) {
   if (cores==0) {cores = ifelse(detectCores()>1,detectCores()-1,1)}
   reduction = base::match.arg(arg = reduction,choices = c("umap","tsne","tumap"),several.ok = FALSE)
 
