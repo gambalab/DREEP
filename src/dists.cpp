@@ -33,9 +33,9 @@ arma::sp_mat cellDist(const arma::sp_mat& m, int ncores=1,bool verbose=true, boo
           {
             if(absolute)
             {
-              dem+= abs((*i_iter)+(*j_iter));
+              dem+= std::abs((*i_iter)+(*j_iter));
             } else {
-              dem+= abs(arma::sign(*i_iter)+arma::sign(*j_iter));
+              dem+= std::abs(arma::sign(*i_iter)+arma::sign(*j_iter));
             }
 
             ++i_iter;
@@ -43,16 +43,16 @@ arma::sp_mat cellDist(const arma::sp_mat& m, int ncores=1,bool verbose=true, boo
           } else {
             if(i_iter.row() < j_iter.row())
             {
-              dem+=abs((*i_iter));
+              dem+=std::abs((*i_iter));
               ++i_iter;
             } else {
-              dem+=abs((*j_iter));
+              dem+=std::abs((*j_iter));
               ++j_iter;
             }
           }
         }
-        for(; i_iter != m.end_col(i); ++i_iter) { dem+=(*i_iter); }
-        for(; j_iter != m.end_col(j); ++j_iter){ dem+=(*j_iter); }
+        for(; i_iter != m.end_col(i); ++i_iter) { dem+=std::abs(*i_iter); }
+        for(; j_iter != m.end_col(j); ++j_iter){ dem+=std::abs(*j_iter); }
         d(j,i) = (2*m.n_cols - dem)/(2*m.n_cols);
         if (full) {d(i,j) = d(j,i);}
       }
