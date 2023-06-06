@@ -161,7 +161,7 @@ runDiffDrugAnalisys = function(dreep.data,cell.set1,cell.set2,fdr.th=0.1,show.pl
 #' @importFrom uwot umap tumap
 #' @import Rtsne
 #' @export
-runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T, ...) {
+runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T,storeCellDist=F, ...) {
   if (cores==0) {cores = ifelse(detectCores()>1,detectCores()-1,1)}
   reduction = base::match.arg(arg = reduction,choices = c("umap","tsne","tumap"),several.ok = FALSE)
 
@@ -174,8 +174,9 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   tmp.es = tmp.es[rowSums(tmp.es!=0)>0,]
 
   base::set.seed(seed)
+  d = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose)
   if (reduction=="umap") {
-    dreep.data$embedding = as.data.frame(uwot::umap(X = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose),
+    dreep.data$embedding = as.data.frame(uwot::umap(X = d,
                                               scale = F,
                                               n_threads = cores,
                                               verbose = verbose,
@@ -185,7 +186,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   }
 
   if (reduction=="tumap") {
-    dreep.data$embedding = as.data.frame(uwot::tumap(X = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose),
+    dreep.data$embedding = as.data.frame(uwot::tumap(X = d,
                                                     scale = F,
                                                     n_threads = cores,
                                                     verbose = verbose,
@@ -195,7 +196,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   }
 
   if (reduction=="tsne") {
-    dreep.data$embedding = base::as.data.frame(Rtsne::Rtsne(X = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose),
+    dreep.data$embedding = base::as.data.frame(Rtsne::Rtsne(X = d,
                                                             dims = 2,
                                                             pca = F,
                                                             verbose = verbose,
@@ -205,9 +206,15 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
                                                             ...)$Y)
   }
 
-
   rownames(dreep.data$embedding) = base::rownames(tmp.es)
   colnames(dreep.data$embedding) = base::c("X","Y")
+
+  if(storeCellDist) {
+    dreep.data$cellDist=d
+    rm(d,tmp.es);gc()
+  } else {
+    rm(d,tmp.es);gc()
+  }
 
   return(dreep.data)
 }
