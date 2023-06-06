@@ -54,7 +54,7 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
   gpds.signatures = base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE)
   gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
 
-  if (cores==0) {cores = ifelse(detectCores()>1,floor(detectCores()/2),1)}
+  if (cores==0) {cores = detectCores()}
 
   message("Loading GPDS signatures..")
   meta.drug = NULL
@@ -75,52 +75,39 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
   M = M[rownames(M)%in%rownames(M.drug.mkrs),]
   M.drug.mkrs = M.drug.mkrs[rownames(M.drug.mkrs) %in% rownames(M),]
 
-  l.mkrs = make.gene.sets(M,n.markers,cores)
+  l.mkrs = make.gene.sets(M,n.markers,1)
 
   message("Running DREEP...")
-  if (cores>1)
-  {
-    cl = snow::makeCluster(cores)
-    genes = rownames(M.drug.mkrs)
-    snow::clusterExport(cl,c("l.mkrs","genes"),envir = environment())
-    r = snow::parApply(cl,M.drug.mkrs, 2, function(x){
-      names(x) = genes
-      if (gsea=="simple"){
-        res = fgsea::fgseaSimple(pathways = l.mkrs,stats = x,nproc = 2,gseaParam = 0, nperm = 1000)
-      } else {
-        res = fgsea::fgseaMultilevel(pathways = l.mkrs,stats = x,nproc = 2,gseaParam = 0, eps = 0)
-      }
-      res = as.data.frame(res[,c("pval","ES")])
-    })
-    snow::stopCluster(cl)
-  } else {
-    r = apply(M.drug.mkrs, 2, function(x,y=l.mkrs,z=rownames(M.drug.mkrs)){
-      names(x) = z
-      if (gsea=="simple"){
-        res = fgsea::fgseaSimple(pathways = y,stats = x,nproc = 2,gseaParam = 0,nperm = 1000)
-      } else {
-        res = fgsea::fgseaMultilevel(pathways = y,stats = x,nproc = 2,gseaParam = 0,eps = 0)
-      }
-      res = as.data.frame(res[,c("pval","ES")])
-    } )
-  }
+  cl = snow::makeCluster(cores)
+  genes = rownames(M.drug.mkrs)
+  snow::clusterExport(cl,c("l.mkrs","genes"),envir = environment())
+  r = snow::parApply(cl,M.drug.mkrs, 2, function(x){
+    names(x) = genes
+    if (gsea=="simple"){
+      res = fgsea::fgseaSimple(pathways = l.mkrs,stats = x,nproc = 1,gseaParam = 0, nperm = 1000)
+    } else {
+      res = fgsea::fgseaMultilevel(pathways = l.mkrs,stats = x,nproc = 1,gseaParam = 0, eps = 0)
+    }
+    res = as.data.frame(res[,c("pval","ES")])
+  })
+  snow::stopCluster(cl)
   message("FINISHED!!")
 
-    df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < 0.05 & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < 0.05 & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
-    df$conpound.id = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[2]])
-    df$conpound = sapply(strsplit(x = df$conpound.id,split = ":",fixed = T),function(x) x[[1]])
-    df$dataset = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[1]])
-    rownames(df) = df$conpound.id
-    df = df[order(df$med,decreasing = F),]
-    df$target = meta.drug$target[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
-    df$moa = meta.drug$moa[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
-    df$smiles = meta.drug$smiles[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
-    df$dataset = meta.drug$dataset[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
-    M.es = sapply(r, function(x) x[,"ES"])
-    M.pval = sapply(r, function(x) x[,"pval"])
-    rownames(M.es) = rownames(M.pval) = colnames(M)
+  df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < 0.05 & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < 0.05 & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
+  df$conpound.id = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[2]])
+  df$conpound = sapply(strsplit(x = df$conpound.id,split = ":",fixed = T),function(x) x[[1]])
+  df$dataset = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[1]])
+  rownames(df) = df$conpound.id
+  df = df[order(df$med,decreasing = F),]
+  df$target = meta.drug$target[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
+  df$moa = meta.drug$moa[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
+  df$smiles = meta.drug$smiles[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
+  df$dataset = meta.drug$dataset[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
+  M.es = sapply(r, function(x) x[,"ES"])
+  M.pval = sapply(r, function(x) x[,"pval"])
+  rownames(M.es) = rownames(M.pval) = colnames(M)
 
-    return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval))
+  return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval))
 }
 
 #' Differential Drug Analysis
