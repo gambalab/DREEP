@@ -47,7 +47,7 @@ data(small_BC_atlas)
 data <- gficf(M=small_BC_atlas,verbose = T)
 
 # Run DREEP on all the cell of the atlas using only CTRP2 and GDSC drug datasets
-dereep.data <- DREEP::runDREEP(M = data$gficf,n.markers = 500,cores = 0,gsea = "multilevel",gpds.signatures = c("CTRP2","GDSC"))
+dereep.data <- DREEP::runDREEP(M = data$gficf,n.markers = 250,gsea = "multilevel",gpds.signatures = c("CTRP2","GDSC"))
 
 # DREEP predictions are into dereep.data$df data frame
 # Each row is a drug and the coloumn sens contains
