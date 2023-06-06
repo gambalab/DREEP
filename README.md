@@ -56,7 +56,7 @@ head(dereep.data$df)
 
 
 # Run cell reduction using drug response profile estimated from DREEP
-dereep.data <- DREEP::runDrugReduction(dereep.data,verbose = T,cellDistAbsolute = T,reduction = "umap")
+dereep.data <- DREEP::runDrugReduction(dereep.data,verbose = F,cellDistAbsolute = T,reduction = "umap")
 
 # UMAP coordinate are stored into dereep.data$embedding data frame
 head(dereep.data$embedding)
