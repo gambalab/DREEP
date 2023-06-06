@@ -173,8 +173,8 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   tmp.es[dreep.data$es.pval[,colnames(tmp.es)]<pval.th] <- 0
   tmp.es = tmp.es[rowSums(tmp.es!=0)>0,]
 
-  base::set.seed(seed)
   d = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose)
+  base::set.seed(seed)
   if (reduction=="umap") {
     dreep.data$embedding = as.data.frame(uwot::umap(X = d,
                                               scale = F,
