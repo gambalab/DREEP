@@ -37,7 +37,34 @@ if(!require(devtools)){ install.packages("devtools")}
 devtools::install_github("gambalab/DREEP")
 ```
 
-# Example of use
+### 3. Example of use
+``` r
+library(gficf)
+library(DREEP)
+library(ggplot2)
+
+data(small_BC_atlas)
+data <- gficf(M=small_BC_atlas,verbose = T)
+
+# Run DREEP on all the cell of the atlas using only CTRP2 and GDSC drug datasets
+dereep.data <- DREEP::runDREEP(M = data$gficf,n.markers = 500,cores = 0,gsea = "multilevel",gpds.signatures = c("CTRP2","GDSC"))
+
+# DREEP predictions are into dereep.data$df data frame
+# Each row is a drug and the coloumn sens contains
+# the percentage of cells predicted sensitive to the drug
+head(dereep.data$df)
+
+
+# Run cell reduction using drug response profile estimated from DREEP
+dereep.data <- DREEP::runDrugReduction(dereep.data,verbose = T,cellDistAbsolute = T,reduction = "umap")
+
+# UMAP coordinate are stored into dereep.data$embedding data frame
+head(dereep.data$embedding)
+
+# Let's add cell line names and plot the recontructed cell embedding space
+dereep.data$embedding$ccl <- sapply(strsplit(x = rownames(dereep.data$es.mtx),split = "_",fixed = T),function(x) x[1])
+ggplot(data = dereep.data$embedding,aes(x=X,y=Y,color=ccl)) + geom_point(size=.5) + theme_bw() + xlab("UMAP 1") + ylab("UMAP 2")
+```
 
 
 

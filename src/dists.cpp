@@ -31,13 +31,7 @@ arma::sp_mat cellDist(const arma::sp_mat& m, int ncores=1,bool verbose=true, boo
         {
           if(i_iter.row() == j_iter.row())
           {
-            if(absolute)
-            {
-              dem+= std::abs((*i_iter)+(*j_iter));
-            } else {
-              dem+= std::abs(arma::sign(*i_iter)+arma::sign(*j_iter));
-            }
-
+            dem+= (absolute) ? std::abs((*i_iter)+(*j_iter)) : std::abs(arma::sign(*i_iter)+arma::sign(*j_iter));
             ++i_iter;
             ++j_iter;
           } else {
