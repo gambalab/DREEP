@@ -3,7 +3,6 @@
 #' @import progress
 make.gene.sets = function(xx,n.genes=250,nc=4)
 {
-  message("Extracting top scoring genes from each cell..")
   sq = seq(1,ncol(xx),ifelse(ncol(xx)<1000,floor(ncol(xx)/2),1000))
 
   pb <- progress_bar$new(
@@ -35,7 +34,6 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
   }
   snow::stopCluster(cl)
   pb$tick()
-  message("Completed!!")
   names(l) = colnames(xx)
   return(l)
 }
@@ -49,14 +47,14 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
 #' @import snow
 #' @import fgsea
 #' @export
-runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c("CTRP2","GDSC")) {
+runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c("CTRP2","GDSC"),th.pval=0.05,verbose=T) {
   gpds.signatures <- toupper(gpds.signatures)
   gpds.signatures = base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE)
   gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
 
   if (cores==0) {cores = detectCores()}
 
-  message("Loading GPDS signatures..")
+  tsmessage("Loading GPDS signatures..",verbose = verbose)
   meta.drug = NULL
   M.drug.mkrs = NULL
 
@@ -70,14 +68,14 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
     meta.drug = rbind(meta.drug,readRDS(paste0(find.package("DREEP", quiet = FALSE),"/data/",i,".drug.metadata.rds")))
     pb$tick()
   }
-  message("DONE!")
 
   M = M[rownames(M)%in%rownames(M.drug.mkrs),]
   M.drug.mkrs = M.drug.mkrs[rownames(M.drug.mkrs) %in% rownames(M),]
 
+  tsmessage("Extracting top scoring genes from each cell..",verbose = verbose)
   l.mkrs = make.gene.sets(M,n.markers,1)
 
-  message("Running DREEP...")
+  tsmessage("Running DREEP...",verbose = verbose)
   cl = snow::makeCluster(cores)
   genes = rownames(M.drug.mkrs)
   snow::clusterExport(cl,c("l.mkrs","genes"),envir = environment())
@@ -91,9 +89,9 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
     res = as.data.frame(res[,c("pval","ES")])
   })
   snow::stopCluster(cl)
-  message("FINISHED!!")
+  tsmessage("FINISHED!!",verbose = verbose)
 
-  df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < 0.05 & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < 0.05 & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
+  df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < th.pval & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < th.pval & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
   df$conpound.id = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[2]])
   df$conpound = sapply(strsplit(x = df$conpound.id,split = ":",fixed = T),function(x) x[[1]])
   df$dataset = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[1]])
@@ -173,7 +171,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   tmp.es[dreep.data$es.pval[,colnames(tmp.es)]<pval.th] <- 0
   tmp.es = tmp.es[rowSums(tmp.es!=0)>0,]
 
-  message("Computing cell distances in the drug space..")
+  tsmessage("Computing cell distances in the drug space..",verbose = verbose)
   dreep.data$cellDist <- cellDist(m = Matrix(data = t(tmp.es),sparse = T),ncores = cores,verbose = verbose,full = F,diag = F,absolute=cellDistAbsolute)
 
   base::set.seed(seed)
@@ -231,14 +229,14 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
 clusterCells <- function(dreep.data,data,store.graph=T,seed=180582,verbose=TRUE, resolution = 0.1, n.start = 50, n.iter = 250) {
   if (is.null(dreep.data$cellDist)) {stop("Cell-to-cell distance matrix not stored!")}
 
-  message("Building the graph...")
+  tsmessage("Building the graph...",verbose = verbose)
   g <- igraph::graph_from_adjacency_matrix(dreep.data$cellDist,weighted = T,mode = "lower",diag = F)
 
-  message("Computing graph MST...")
+  tsmessage("Computing graph MST...",verbose = verbose)
   g <- igraph::mst(graph = g,algorithm = "prim")
   igraph::E(g)$weight <- 1 - igraph::E(g)$weight
 
-  message("Performing louvain with modularity optimization...")
+  tsmessage("Performing louvain with modularity optimization...",verbose = verbose)
   community <- RunModularityClustering(igraph::as_adjacency_matrix(g,attr = "weight",sparse = T),1,resolution,2,n.start,n.iter,seed,verbose) + 1
   dreep.data$embedding$cluster=as.character(community)
   if (store.graph) {dreep.data$cell.graph=g}
@@ -277,3 +275,18 @@ RunModularityClustering <- function(SNN = matrix(), modularity = 1, resolution =
   return(clusters)
 }
 
+# message with a time stamp
+tsmessage <- function(..., domain = NULL, appendLF = TRUE, verbose = TRUE,time_stamp = TRUE) {
+  if (verbose) {
+    msg <- ""
+    if (time_stamp) {
+      msg <- paste0(stime(), " ")
+    }
+    message(msg, ..., domain = domain, appendLF = appendLF)
+    utils::flush.console()
+  }
+}
+
+stime <- function() {
+  format(Sys.time(), "%T")
+}
