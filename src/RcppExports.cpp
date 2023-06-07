@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppEigen.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -11,6 +12,25 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// RunModularityClusteringCpp
+IntegerVector RunModularityClusteringCpp(Eigen::SparseMatrix<double> SNN, int modularityFunction, double resolution, int algorithm, int nRandomStarts, int nIterations, int randomSeed, bool printOutput, std::string edgefilename);
+RcppExport SEXP _DREEP_RunModularityClusteringCpp(SEXP SNNSEXP, SEXP modularityFunctionSEXP, SEXP resolutionSEXP, SEXP algorithmSEXP, SEXP nRandomStartsSEXP, SEXP nIterationsSEXP, SEXP randomSeedSEXP, SEXP printOutputSEXP, SEXP edgefilenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::SparseMatrix<double> >::type SNN(SNNSEXP);
+    Rcpp::traits::input_parameter< int >::type modularityFunction(modularityFunctionSEXP);
+    Rcpp::traits::input_parameter< double >::type resolution(resolutionSEXP);
+    Rcpp::traits::input_parameter< int >::type algorithm(algorithmSEXP);
+    Rcpp::traits::input_parameter< int >::type nRandomStarts(nRandomStartsSEXP);
+    Rcpp::traits::input_parameter< int >::type nIterations(nIterationsSEXP);
+    Rcpp::traits::input_parameter< int >::type randomSeed(randomSeedSEXP);
+    Rcpp::traits::input_parameter< bool >::type printOutput(printOutputSEXP);
+    Rcpp::traits::input_parameter< std::string >::type edgefilename(edgefilenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(RunModularityClusteringCpp(SNN, modularityFunction, resolution, algorithm, nRandomStarts, nIterations, randomSeed, printOutput, edgefilename));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cellDist
 arma::sp_mat cellDist(const arma::sp_mat& m, int ncores, bool verbose, bool full, bool diag, bool absolute);
 RcppExport SEXP _DREEP_cellDist(SEXP mSEXP, SEXP ncoresSEXP, SEXP verboseSEXP, SEXP fullSEXP, SEXP diagSEXP, SEXP absoluteSEXP) {
@@ -31,6 +51,7 @@ END_RCPP
 RcppExport SEXP detectCoresCpp(void);
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_DREEP_RunModularityClusteringCpp", (DL_FUNC) &_DREEP_RunModularityClusteringCpp, 9},
     {"_DREEP_cellDist", (DL_FUNC) &_DREEP_cellDist, 6},
     {"detectCoresCpp", (DL_FUNC) &detectCoresCpp, 0},
     {NULL, NULL, 0}

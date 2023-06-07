@@ -161,7 +161,7 @@ runDiffDrugAnalisys = function(dreep.data,cell.set1,cell.set2,fdr.th=0.1,show.pl
 #' @importFrom uwot umap tumap
 #' @import Rtsne
 #' @export
-runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T,storeCellDist=F, ...) {
+runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T,storeCellDist=T, ...) {
   if (cores==0) {cores = ifelse(detectCores()>1,detectCores()-1,1)}
   reduction = base::match.arg(arg = reduction,choices = c("umap","tsne","tumap"),several.ok = FALSE)
 
@@ -173,10 +173,12 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   tmp.es[dreep.data$es.pval[,colnames(tmp.es)]<pval.th] <- 0
   tmp.es = tmp.es[rowSums(tmp.es!=0)>0,]
 
-  d = cellDistWrapper(t(tmp.es),cores,cellDistAbsolute,verbose)
+  message("Computing cell distances in the drug space..")
+  dreep.data$cellDist <- cellDist(m = Matrix(data = t(tmp.es),sparse = T),ncores = cores,verbose = verbose,full = F,diag = F,absolute=cellDistAbsolute)
+
   base::set.seed(seed)
   if (reduction=="umap") {
-    dreep.data$embedding = as.data.frame(uwot::umap(X = d,
+    dreep.data$embedding = as.data.frame(uwot::umap(X = as.dist(dreep.data$cellDist),
                                               scale = F,
                                               n_threads = cores,
                                               verbose = verbose,
@@ -186,7 +188,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   }
 
   if (reduction=="tumap") {
-    dreep.data$embedding = as.data.frame(uwot::tumap(X = d,
+    dreep.data$embedding = as.data.frame(uwot::tumap(X = as.dist(dreep.data$cellDist),
                                                     scale = F,
                                                     n_threads = cores,
                                                     verbose = verbose,
@@ -196,7 +198,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
   }
 
   if (reduction=="tsne") {
-    dreep.data$embedding = base::as.data.frame(Rtsne::Rtsne(X = d,
+    dreep.data$embedding = base::as.data.frame(Rtsne::Rtsne(X = as.dist(dreep.data$cellDist),
                                                             dims = 2,
                                                             pca = F,
                                                             verbose = verbose,
@@ -208,17 +210,41 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
 
   rownames(dreep.data$embedding) = base::rownames(tmp.es)
   colnames(dreep.data$embedding) = base::c("X","Y")
+  rm(tmp.es);gc()
 
-  if(storeCellDist) {
-    dreep.data$cellDist=d
-    rm(d,tmp.es);gc()
-  } else {
-    rm(d,tmp.es);gc()
+  if(!storeCellDist) {
+    dreep.data$cellDist <- NULL
+    gc()
   }
 
   return(dreep.data)
 }
 
+
+#' Cell Clustering
+#'
+#' Cell Clustering using cell-to-cell distances computed from the drug profiles
+#'
+#' @importFrom igraph graph_from_adjacency_matrix mst E
+#' @import Matrix
+#' @export
+clusterCells <- function(dreep.data,data,store.graph=T,seed=180582,verbose=TRUE, resolution = 0.1, n.start = 50, n.iter = 250) {
+  if (is.null(dreep.data$cellDist)) {stop("Cell-to-cell distance matrix not stored!")}
+
+  message("Building the graph...")
+  g <- igraph::graph_from_adjacency_matrix(dreep.data$cellDist,weighted = T,mode = "lower",diag = F)
+
+  message("Computing graph MST...")
+  g <- igraph::mst(graph = g,algorithm = "prim")
+  igraph::E(g)$weight <- 1 - igraph::E(g)$weight
+
+  message("Performing louvain with modularity optimization...")
+  community <- RunModularityClustering(igraph::as_adjacency_matrix(g,attr = "weight",sparse = T),1,resolution,2,n.start,n.iter,seed,verbose) + 1
+  dreep.data$embedding$cluster=as.character(community)
+  if (store.graph) {dreep.data$cell.graph=g}
+
+  return(dreep.data)
+}
 
 #' Detect the Number of CPU Cores
 #'
@@ -228,8 +254,26 @@ detectCores <- function() {
   .Call("detectCoresCpp")
 }
 
-
-cellDistWrapper <- function(m,cores,cellDistAbsolute,verbose) {
-  message("Computing cell distances in the drug space..")
-  as.dist(cellDist(m = Matrix(data = m,sparse = T),ncores = cores,verbose = verbose,full = F,diag = F,absolute=cellDistAbsolute))
+# Runs the modularity optimizer (C++ function from seurat package https://github.com/satijalab/seurat)
+#
+# @param SNN SNN matrix to use as input for the clustering algorithms
+# @param modularity Modularity function to use in clustering (1 = standard; 2 = alternative)
+# @param resolution Value of the resolution parameter, use a value above (below) 1.0 if you want to obtain a larger (smaller) number of communities
+# @param algorithm Algorithm for modularity optimization (1 = original Louvain algorithm; 2 = Louvain algorithm with multilevel refinement; 3 = SLM algorithm; 4 = Leiden algorithm). Leiden requires the leidenalg python module.
+# @param n.start Number of random starts
+# @param n.iter Maximal number of iterations per random start
+# @param random.seed Seed of the random number generator
+# @param print.output Whether or not to print output to the console
+# @param temp.file.location Deprecated and no longer used
+# @param edge.file.name Path to edge file to use
+#
+# @return clusters
+#
+#' @importFrom utils read.table write.table
+#
+RunModularityClustering <- function(SNN = matrix(), modularity = 1, resolution = 0.8, algorithm = 1, n.start = 10, n.iter = 10, random.seed = 0, print.output = TRUE, temp.file.location = NULL, edge.file.name = "")
+{
+  clusters <- RunModularityClusteringCpp(SNN,modularity,resolution,algorithm,n.start,n.iter,random.seed,print.output,edge.file.name)
+  return(clusters)
 }
+

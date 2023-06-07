@@ -12,7 +12,8 @@ runDrugReduction(
   seed = 180582,
   verbose = T,
   reduction = "umap",
-  cellDistAbsolute = F,
+  cellDistAbsolute = T,
+  storeCellDist = T,
   ...
 )
 }

@@ -8,8 +8,8 @@ runDREEP(
   M,
   n.markers = 250,
   cores = 0,
-  gsea = "simple",
-  gpds.signatures = "CTRP2"
+  gsea = "multilevel",
+  gpds.signatures = c("CTRP2", "GDSC")
 )
 }
 \description{
