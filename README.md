@@ -71,6 +71,10 @@ head(dreep.data$embedding)
 # Let's add cell line names and plot the recontructed cell embedding space
 dreep.data$embedding$ccl <- sapply(strsplit(x = rownames(dreep.data$es.mtx),split = "_",fixed = T),function(x) x[1])
 ggplot(data = dreep.data$embedding,aes(x=X,y=Y,color=ccl)) + geom_point(size=.5) + theme_bw() + xlab("UMAP 1") + ylab("UMAP 2")
+
+# We can cluster cells using the respone profiles estimated by DREEP
+dreep.data <- DREEP::clusterCells(dreep.data,verbose = T,resolution = 0.01)
+ggplot(data = dreep.data$embedding,aes(x=X,y=Y,color=cluster)) + geom_point(size=.5) + theme_bw() + xlab("UMAP 1") + ylab("UMAP 2")
 ```
 
 
