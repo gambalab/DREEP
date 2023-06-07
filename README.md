@@ -47,23 +47,30 @@ data(small_BC_atlas)
 data <- gficf(M=small_BC_atlas,verbose = T)
 
 # Run DREEP on all the cell of the atlas using only CTRP2 and GDSC drug datasets
-dereep.data <- DREEP::runDREEP(M = data$gficf,n.markers = 250,gsea = "multilevel",gpds.signatures = c("CTRP2","GDSC"))
+dreep.data <- DREEP::runDREEP(M = data$gficf,
+                              n.markers = 250,
+                              gsea = "multilevel",
+                              gpds.signatures = c("CTRP2","GDSC"))
 
-# DREEP predictions are into dereep.data$df data frame
+# DREEP predictions are into dreep.data$df data frame
 # Each row is a drug and the coloumn sens contains
 # the percentage of cells predicted sensitive to the drug
-head(dereep.data$df)
+head(dreep.data$df)
 
 
 # Run cell reduction using drug response profile estimated from DREEP
-dereep.data <- DREEP::runDrugReduction(dereep.data,verbose = F,cellDistAbsolute = T,reduction = "umap")
+dreep.data <- DREEP::runDrugReduction(dreep.data,
+                                      verbose = T,
+                                      cellDistAbsolute = F,
+                                      reduction = "umap",
+                                      storeCellDist = T)
 
-# UMAP coordinate are stored into dereep.data$embedding data frame
-head(dereep.data$embedding)
+# UMAP coordinate are stored into dreep.data$embedding data frame
+head(dreep.data$embedding)
 
 # Let's add cell line names and plot the recontructed cell embedding space
-dereep.data$embedding$ccl <- sapply(strsplit(x = rownames(dereep.data$es.mtx),split = "_",fixed = T),function(x) x[1])
-ggplot(data = dereep.data$embedding,aes(x=X,y=Y,color=ccl)) + geom_point(size=.5) + theme_bw() + xlab("UMAP 1") + ylab("UMAP 2")
+dreep.data$embedding$ccl <- sapply(strsplit(x = rownames(dreep.data$es.mtx),split = "_",fixed = T),function(x) x[1])
+ggplot(data = dreep.data$embedding,aes(x=X,y=Y,color=ccl)) + geom_point(size=.5) + theme_bw() + xlab("UMAP 1") + ylab("UMAP 2")
 ```
 
 
