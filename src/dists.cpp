@@ -14,7 +14,7 @@ using namespace Rcpp;
 arma::sp_mat cellDist(const arma::sp_mat& m, int ncores=1,bool verbose=true, bool full=false, bool diag=true,bool absolute=false)
 {
   typedef arma::sp_mat::const_col_iterator iter;
-  arma::sp_mat d(m.n_cols,m.n_cols);
+  arma::mat d(m.n_cols,m.n_cols);
   int tot = (full) ? m.n_cols*m.n_cols - ((diag) ? m.n_cols : 0) : (m.n_cols*m.n_cols + ((diag) ? m.n_cols : 0))/2;
   Progress p(tot, verbose);
 #pragma omp parallel for num_threads(ncores) shared(d)
@@ -53,6 +53,6 @@ arma::sp_mat cellDist(const arma::sp_mat& m, int ncores=1,bool verbose=true, boo
     }
   }
 
-  return(d);
+  return(arma::sp_mat(d));
 }
 
