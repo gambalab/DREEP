@@ -2,7 +2,7 @@
 
 ## Description
 
-DREEP (Drug Response Estimation from single-cell Expression Profiles) bioRxiv preprint available at [Pellecchia, Viscido et al. 2023](https://www.biorxiv.org/content/10.1101/2023.06.01.543212v1).
+DREEP (Drug Response Estimation from single-cell Expression Profiles) bioRxiv preprint available [Pellecchia, Viscido et al. 2023](https://www.biorxiv.org/content/10.1101/2023.06.01.543212v1.full).
 
 DREEP is a bioinformatics tool that leverages results from large-scale cell-line viability screens and enrichment analysis to predict drug vulnerability from the transcriptional state of a cell. It only requires a pre-defined collection of Genomic Profiles of Drug Sensitivity (GPDS) signatures that are ranked lists of genes reflecting their importance in predicting the effect of a small molecule.
 
