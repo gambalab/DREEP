@@ -105,7 +105,7 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTR
   M.pval = sapply(r, function(x) x[,"pval"])
   rownames(M.es) = rownames(M.pval) = colnames(M)
   tsmessage("Adjusting pvalues..",verbose = verbose)
-  M.fdr <- apply(M.pv,2,p.adjust,method="fdr")
+  M.fdr <- apply(M.pval,2,p.adjust,method="fdr")
   tsmessage("FINISHED!!",verbose = verbose)
   return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval,"es.fdr"=M.fdr))
 }
