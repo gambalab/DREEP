@@ -47,7 +47,7 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
 #' @import snow
 #' @import fgsea
 #' @export
-runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c("CTRP2","GDSC"),th.pval=0.05,verbose=T) {
+runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC"),th.pval=0.05,verbose=T) {
   gpds.signatures <- toupper(gpds.signatures)
   gpds.signatures = base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE)
   gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
@@ -89,7 +89,7 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
     res = as.data.frame(res[,c("pval","ES")])
   })
   snow::stopCluster(cl)
-  tsmessage("FINISHED!!",verbose = verbose)
+  tsmessage("DREEP Running finished!!",verbose = verbose)
 
   df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < th.pval & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < th.pval & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
   df$conpound.id = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[2]])
@@ -104,8 +104,10 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="multilevel",gpds.signatures=c(
   M.es = sapply(r, function(x) x[,"ES"])
   M.pval = sapply(r, function(x) x[,"pval"])
   rownames(M.es) = rownames(M.pval) = colnames(M)
-
-  return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval))
+  tsmessage("Adjusting pvalues..",verbose = verbose)
+  M.fdr <- apply(M.pv,2,p.adjust,method="fdr")
+  tsmessage("FINISHED!!",verbose = verbose)
+  return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval,"es.fdr"=M.fdr))
 }
 
 #' Differential Drug Analysis
