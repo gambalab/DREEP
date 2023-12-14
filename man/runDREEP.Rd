@@ -8,10 +8,12 @@ runDREEP(
   M,
   n.markers = 250,
   cores = 0,
-  gsea = "multilevel",
+  gsea = "simple",
   gpds.signatures = c("CTRP2", "GDSC"),
-  th.pval = 0.05,
-  verbose = T
+  th.fdr = 0.1,
+  verbose = T,
+  storeCellMarkers = F,
+  rescalePerc = T
 )
 }
 \description{

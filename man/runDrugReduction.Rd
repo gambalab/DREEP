@@ -6,7 +6,7 @@
 \usage{
 runDrugReduction(
   dreep.data,
-  pval.th = 0.05,
+  fdr.th = 0.1,
   drug.subset = NULL,
   cores = 0,
   seed = 180582,

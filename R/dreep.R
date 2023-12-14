@@ -46,10 +46,13 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
 #' @import fastmatch
 #' @import snow
 #' @import fgsea
+#' @import progress
+#' @import reshape2
+#' @import dplyr
 #' @export
-runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC"),th.pval=0.05,verbose=T) {
+runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC"),th.fdr=0.1,verbose=T,storeCellMarkers=F,rescalePerc=F) {
   gpds.signatures <- toupper(gpds.signatures)
-  gpds.signatures = base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE)
+  gpds.signatures = unique(base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE))
   gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
 
   if (cores==0) {cores = detectCores()}
@@ -73,12 +76,13 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTR
   M.drug.mkrs = M.drug.mkrs[rownames(M.drug.mkrs) %in% rownames(M),]
 
   tsmessage("Extracting top scoring genes from each cell..",verbose = verbose)
-  l.mkrs = make.gene.sets(M,n.markers,1)
+  l.mkrs = make.gene.sets(M,n.markers,1);
+  cells=colnames(M);rm(M);gc(reset = T)
 
   tsmessage("Running DREEP...",verbose = verbose)
   cl = snow::makeCluster(cores)
   genes = rownames(M.drug.mkrs)
-  snow::clusterExport(cl,c("l.mkrs","genes"),envir = environment())
+  snow::clusterExport(cl,c("l.mkrs","genes","gsea"),envir = environment())
   r = snow::parApply(cl,M.drug.mkrs, 2, function(x){
     names(x) = genes
     if (gsea=="simple"){
@@ -91,7 +95,33 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTR
   snow::stopCluster(cl)
   tsmessage("DREEP Running finished!!",verbose = verbose)
 
-  df = do.call("rbind",lapply(r, function(x) data.frame(sens=sum(x[,"pval"] < th.pval & x[,"ES"]<0)/nrow(x),res=sum(x[,"pval"] < th.pval & x[,"ES"]>0)/nrow(x),med=median(x[,"ES"]))))
+  M.es = sapply(r, function(x) x[,"ES"])
+  M.pval = sapply(r, function(x) x[,"pval"])
+  rownames(M.es) = rownames(M.pval) = cells
+  tsmessage("Adjusting pvalues..",verbose = verbose)
+  M.fdr <- apply(M.pval,2,p.adjust,method="fdr")
+  tsmessage("FINISHED!!",verbose = verbose)
+
+  tmp = reshape2::melt(M.es)
+  tmp$fdr = reshape2::melt(M.fdr)$value
+
+  if(rescalePerc) {
+    df = tmp %>%
+          dplyr::group_by(Var2) %>%
+          dplyr::summarize(sens=sum(value<0 & fdr<th.fdr)/sum(fdr<th.fdr),
+                           res=sum(value>0 & fdr<th.fdr)/sum(fdr<th.fdr),
+                           med=median(value))
+  } else {
+    df = tmp %>%
+      dplyr::group_by(Var2) %>%
+      dplyr::summarize(sens=sum(value<0 & fdr<th.fdr)/length(fdr),
+                       res=sum(value>0 & fdr<th.fdr)/length(fdr),
+                       med=median(value))
+  }
+
+  df=as.data.frame(df);rm(tmp);
+  rownames(df) = df$Var2
+  df = df[,-1]
   df$conpound.id = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[2]])
   df$conpound = sapply(strsplit(x = df$conpound.id,split = ":",fixed = T),function(x) x[[1]])
   df$dataset = sapply(strsplit(x = names(r),split = "_",fixed = T),function(x) x[[1]])
@@ -101,13 +131,13 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTR
   df$moa = meta.drug$moa[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
   df$smiles = meta.drug$smiles[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
   df$dataset = meta.drug$dataset[fastmatch::fmatch(df$conpound.id,meta.drug$id)]
-  M.es = sapply(r, function(x) x[,"ES"])
-  M.pval = sapply(r, function(x) x[,"pval"])
-  rownames(M.es) = rownames(M.pval) = colnames(M)
-  tsmessage("Adjusting pvalues..",verbose = verbose)
-  M.fdr <- apply(M.pval,2,p.adjust,method="fdr")
-  tsmessage("FINISHED!!",verbose = verbose)
-  return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval,"es.fdr"=M.fdr))
+
+
+  if(storeCellMarkers) {
+    return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval,"es.fdr"=M.fdr,"l.mkrs"=l.mkrs))
+  } else {
+    return(list("df"=df,"es.mtx"=M.es,"es.pval"=M.pval,"es.fdr"=M.fdr))
+  }
 }
 
 #' Differential Drug Analysis
@@ -161,7 +191,7 @@ runDiffDrugAnalisys = function(dreep.data,cell.set1,cell.set2,fdr.th=0.1,show.pl
 #' @importFrom uwot umap tumap
 #' @import Rtsne
 #' @export
-runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T,storeCellDist=T, ...) {
+runDrugReduction = function(dreep.data,fdr.th=0.1,drug.subset=NULL,cores=0,seed=180582,verbose=T,reduction="umap",cellDistAbsolute=T,storeCellDist=T, ...) {
   if (cores==0) {cores = ifelse(detectCores()>1,detectCores()-1,1)}
   reduction = base::match.arg(arg = reduction,choices = c("umap","tsne","tumap"),several.ok = FALSE)
 
@@ -170,7 +200,7 @@ runDrugReduction = function(dreep.data,pval.th=0.05,drug.subset=NULL,cores=0,see
     } else {
       tmp.es <- dreep.data$es.mtx[,drug.subset]
   }
-  tmp.es[dreep.data$es.pval[,colnames(tmp.es)]<pval.th] <- 0
+  tmp.es[dreep.data$es.fdr[,colnames(tmp.es)]<fdr.th] <- 0
   tmp.es = tmp.es[rowSums(tmp.es!=0)>0,]
 
   tsmessage("Computing cell distances in the drug space..",verbose = verbose)

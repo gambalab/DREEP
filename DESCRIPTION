@@ -21,5 +21,7 @@ Imports:
     fastmatch,
     fgsea,
     snow,
-    progress
+    progress,
+    reshape2,
+    dplyr
 SystemRequirements: GNU make
