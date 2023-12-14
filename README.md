@@ -57,6 +57,8 @@ dreep.data <- DREEP::runDREEP(M = data$gficf,
 # DREEP predictions are into dreep.data$df data frame
 # Each row is a drug and the coloumn sens contains
 # the percentage of cells predicted sensitive to the drug
+# however as in the manuscript the better measure is the median ES
+# where negative scores means sensitivity to the drug
 head(dreep.data$df)
 
 
