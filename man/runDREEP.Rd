@@ -13,7 +13,9 @@ runDREEP(
   th.fdr = 0.1,
   verbose = T,
   storeCellMarkers = F,
-  rescalePerc = T
+  rescalePerc = F,
+  useUncorrectedPvals = F,
+  th.pval = 0.05
 )
 }
 \description{

@@ -50,7 +50,7 @@ make.gene.sets = function(xx,n.genes=250,nc=4)
 #' @import reshape2
 #' @import dplyr
 #' @export
-runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC"),th.fdr=0.1,verbose=T,storeCellMarkers=F,rescalePerc=F) {
+runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTRP2","GDSC"),th.fdr=0.1,verbose=T,storeCellMarkers=F,rescalePerc=F,useUncorrectedPvals=F,th.pval=0.05) {
   gpds.signatures <- toupper(gpds.signatures)
   gpds.signatures = unique(base::match.arg(arg = gpds.signatures,choices = c("CTRP2","GDSC","PRISM"),several.ok = TRUE))
   gsea = base::match.arg(arg = gsea,choices = c("simple","multilevel"),several.ok = FALSE)
@@ -103,7 +103,12 @@ runDREEP = function(M,n.markers=250,cores=0,gsea="simple",gpds.signatures=c("CTR
   tsmessage("FINISHED!!",verbose = verbose)
 
   tmp = reshape2::melt(M.es)
-  tmp$fdr = reshape2::melt(M.fdr)$value
+  if(!useUncorrectedPvals) {
+    tmp$fdr = reshape2::melt(M.fdr)$value
+  } else {
+    tmp$fdr = reshape2::melt(M.pval)$value
+    th.fdr = th.pval
+  }
 
   if(rescalePerc) {
     df = tmp %>%
