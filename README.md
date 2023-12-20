@@ -51,14 +51,15 @@ data <- gficf(M=small_BC_atlas,verbose = T)
 # Run DREEP on all the cell of the atlas using only CTRP2 and GDSC drug datasets
 dreep.data <- DREEP::runDREEP(M = data$gficf,
                               n.markers = 250,
-                              gsea = "simple",
+                              gsea = "multilevel",
                               gpds.signatures = c("CTRP2","GDSC"))
 
 # DREEP predictions are into dreep.data$df data frame
-# Each row is a drug and the coloumn sens contains
-# the percentage of cells predicted sensitive to the drug
-# however as in the manuscript the better measure is the median ES
-# where negative scores means sensitivity to the drug
+# Each row is a drug and the column sens contains
+# the percentage of cells predicted sensitive to the drug.
+# Drugs in this data frame are sorted according to the median ES of the drug on the cell population.
+# This is the best measure to determine if your cells are sensible or not to a drug.
+# So please use these values instead of the percentage of cells.
 head(dreep.data$df)
 
 
