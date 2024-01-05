@@ -50,7 +50,7 @@ data <- gficf(M=small_BC_atlas,verbose = T)
 
 # Run DREEP on all the cell of the atlas using only CTRP2 and GDSC drug datasets
 dreep.data <- DREEP::runDREEP(M = data$gficf,
-                              n.markers = 250,
+                              n.markers = 500,
                               gsea = "simple",
                               gpds.signatures = c("CTRP2","GDSC"))
 
